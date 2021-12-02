@@ -1,0 +1,14 @@
+name: testing
+description: this is a description
+version: 0.0.1
+
+env:
+  foo: bar
+
+hello:
+  - echo first
+  - echo second
+  - echo third
+
+bye: 
+  hello
