@@ -64,7 +64,7 @@ docs: ## Build docs at target/doc
 	@$(CARGO) doc
 
 clean: ## Clean project
-	@$(CARGO) clean
+	@$(CARGO) clean && rm -rf target
 
 .PHONY: watch
 watch: ## Watch project and build on change

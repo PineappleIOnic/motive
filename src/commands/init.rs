@@ -34,9 +34,7 @@ impl Init {
       return;
     }
 
-    let default = Config::default();
-
-    match Config::write(&default) {
+    match Config::write_default() {
       Ok(_) => console_success!("alibi file created"),
       Err(why) => console_panic!("failed to create alibi file: {}", why),
     };

@@ -20,7 +20,6 @@ use std::{
   collections::HashMap,
 };
 
-
 use serde_yaml::Value;
 
 use serde::{
@@ -37,18 +36,28 @@ use task::{
 
 const SILENT_MARKER:&str = "[_##SILENT##_]";
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
+  pub name:String,
+  pub description:Option<String>,
+  pub version:Option<String>,
   pub tasks:Option<Vec<Task>>,
   pub env:Option<HashMap<String, Value>>,
 }
 
 impl Config {
-  pub fn default() -> Self {
-    Config {
-      tasks: None,
-      env: None,
-    }
+  pub fn write_default() -> Result<(), io::Error> {
+    let name = env::current_dir().unwrap().file_name().unwrap().to_str().unwrap().to_string();
+    let config = format!(
+      "name: {}\ndescription: this is a description\nversion: 0.0.1\n",
+      name.clone()
+    );
+    
+    let cwd = env::current_dir().unwrap();
+    let file_path = format!("{}/alibi", cwd.to_str().unwrap());
+    let path = Path::new(file_path.as_str());
+
+    file_write!(path, config)
   }
 
   pub fn exists() -> bool {
@@ -57,6 +66,7 @@ impl Config {
 
     path.exists()
   }
+
 
   pub fn write(&self) -> Result<(), io::Error> {
     let cwd = env::current_dir().unwrap();
@@ -96,13 +106,32 @@ impl Config {
 
     buffer = buffer.replace("@", SILENT_MARKER);
 
+
     let data:HashMap<String, Value> = serde_yaml::from_str(&buffer).unwrap();
+    let name = data.get("name").unwrap().as_str().unwrap().to_string();
+
+    let description = 
+      match data.get("description") {
+        Some(d) => Some(d.as_str().unwrap().to_string()),
+        None => None
+      };
+
+      let version = 
+      match data.get("version") {
+        Some(d) => Some(d.as_str().unwrap().to_string()),
+        None => None
+      };
+
     let tasks = Self::get_tasks(&data);
     let env = Self::get_env(&data);
 
+
     Ok(Config {
-      tasks: tasks,
-      env: env,
+      name,
+      description,
+      version,
+      tasks,
+      env,
     })
   }
 

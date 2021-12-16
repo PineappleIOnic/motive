@@ -1,14 +1,11 @@
-name: testing
-description: this is a description
-version: 0.0.1
+# this is a comment
 
-env:
-  foo: bar
+FOO='BAR'
 
-hello:
-  - echo first
-  - echo second
-  - echo third
+blee="blop"
 
-bye: 
-  hello
+task: 
+  testing
+
+foo: task
+  @bar
