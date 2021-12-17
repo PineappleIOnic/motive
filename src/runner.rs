@@ -22,6 +22,8 @@ use std::{
   }
 };
 
+use regex::Regex;
+
 use crate::result::Result;
 
 use crate::alibi::Alibi;
@@ -42,9 +44,43 @@ impl Runner {
     }
   }
 
+  fn var_check(&self, args:&Vec<String>) -> Vec<String> {
+    let assignments = 
+      self.alibi.tree.assignments
+      .iter()
+      .map(|a| a.identifier.clone())
+      .collect::<Vec<String>>();
+
+    let pattern = Regex::new(r"\$\{?([a-zA-Z0-9_]+)\}?").unwrap();
+    let mut new_args:Vec<String> = Vec::new();
+
+    for arg in args {
+      let mut new_arg = arg.clone();
+      
+      for cap in pattern.captures_iter(arg) {
+        let var = string!(cap.get(1).unwrap().as_str());
+        if assignments.contains(&var) {
+          let value = 
+            self.alibi.tree.assignments
+            .iter()
+            .find(|a| a.identifier == var).unwrap()
+            .value
+            .clone();
+          new_arg = value.clone();
+        }
+      }
+
+      new_args.push(new_arg);
+    }
+    
+    new_args
+  }
+
   fn run(&self, cmd:&TaskCommand) {
     let mut command = cmd.line.clone();
-    let args = command.split_off(1);
+    let mut args = command.split_off(1);
+    args = self.var_check(&args);
+
     let name = command.first().unwrap();
 
     let mut env_vars = HashMap::new();
@@ -56,18 +92,18 @@ impl Runner {
       env_vars.insert(key, value);
     }
 
+
+    let mut run_args:Vec<String> = vec![name.clone()];
+    run_args.append(&mut args);
+
     let result = 
-      Command::new(name.clone())
+      Command::new(env!("SHELL"))
       .envs(&env_vars)
-      .args(
-        args
-        .iter()
-        .map(|a| a.replace("\"", "").clone())
-        .collect::<Vec<String>>()
-      )
+      .arg("-c")
+      .arg(run_args.join(" "))
       .output()
       .expect(format!("Failed to run {}", name).as_str());
-
+      
     if false == cmd.muted {
       stdout().write_all(&result.stdout).unwrap();
       stderr().write_all(&result.stderr).unwrap();
@@ -95,10 +131,3 @@ impl Runner {
     true
   }
 }
-
-// fn run_task_command(cmd:&TaskCommand) {
-//   let mut command = cmd.line.clone();
-//   let args = command.split_off(1);
-
-//   execute(command.first().unwrap().clone(), args, cmd.muted);
-// }

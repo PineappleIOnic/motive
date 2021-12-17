@@ -56,3 +56,10 @@ pub struct Tree {
   pub tasks: Vec<Task>,
   pub env_vars: Vec<EnvVar>,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Function {
+  pub name: String,
+  pub args: Vec<String>,
+  pub body: String,
+}
