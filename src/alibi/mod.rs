@@ -8,179 +8,43 @@
 // Copywrite (c) 2021 Wess.io
 //
 
-use std::iter::Peekable;
-use logos::Logos;
+use std::io::Read;
 
-mod lexer;
-use lexer::{
-  Lexer, 
-  Token, 
-};
+pub mod lexer;
+pub mod ast;
+pub mod parser;
 
-mod ast;
+use parser::Parser;
 use ast::{
-  Assignment,
+  Tree,
   Task,
-  TaskCommand,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-struct Entry {
-  pub token:Token,
-  pub text:String,
+pub struct Alibi {
+  pub tree:Tree,
 }
 
-struct Parser<'a> {
-  lexer: Peekable<Lexer<'a>>,
-  assignments: Vec<Assignment>,
-  tasks: Vec<Task>,
-}
-
-impl<'a> Parser<'a> {
-  pub fn new(input: &'a str) -> Self {
-    Self {
-      lexer: Lexer::new(input).peekable(),
-      assignments: Vec::new(),
-      tasks: Vec::new(),
-    }
-  }
-
-  pub fn bump(&mut self) {
-    match self.lexer.next() {
-      Some((_text, _kind)) => {},
-      None => {
-        println!("EOF");
-      },
-    }
-  }
-
-  pub fn peek(&mut self) -> Option<Entry> {
-    self.lexer.peek().map(|(text, kind)| Entry{text: string!(*text), token: *kind})
-  }
-
-  pub fn parse_assign(&mut self, identifier:Entry) {
-    self.bump();
+impl Alibi {
+  pub fn new(filename:&str) -> Self {
+    let source:String = file_read!(filename);
+    let mut parser = Parser::new(&source);
     
-    let  peeked= self.peek();
-
-    self.assignments.push(
-      Assignment {
-        identifier: identifier.text,
-        value: match peeked {
-          Some(entry) => entry.text.replace("\"", "").replace("'", "").clone(),
-          None => "".to_string(),
-        },
+    let tree = match parser.parse() {
+      Some(t) => t,
+      None => {
+        panic!("Failed to parse alibi");
       }
-    );
+    };
+
+    Self { tree }
   }
 
-  pub fn parse_task_command(&mut self) -> Option<TaskCommand> {
-    let mut line:Vec<String> = Vec::new();
-    let mut muted = false;
+  pub fn get_task(&self, name:&str) -> Option<Task>{
+    let task = self.tree.tasks.iter().find(|t| t.name == name);
 
-    let mut entered = false;
-
-    while let Some(peeked) = self.peek() {
-      match peeked.token {
-        Token::Newline => {
-          return Some(TaskCommand {
-            line,
-            muted,
-          });
-        },
-        Token::Mute => {
-          if entered == false {
-            muted = true;
-          }
-        },
-        Token::Identifier => {
-          line.push(peeked.text);
-        },
-        Token::Argument => {
-          line.push(peeked.text);
-        },
-        _ => {
-          
-        }
-      }
-
-      entered = true;
-      self.bump();
-    }
-
-    None
-  }
-
-  pub fn parse_task(&mut self, identifier:Entry) {
-    self.bump();
-
-    while let Some(peeked) = self.peek() {
-      let mut commands:Vec<TaskCommand> = Vec::new();
-
-      match peeked.token {
-        Token::Indent => {
-          self.bump();
-          
-          if let Some(cmd) = self.parse_task_command() {
-            commands.push(cmd);
-          }
-        },
-        Token::Identifier => {
-          self.tasks.push(
-            Task {
-              name: identifier.text.clone(),
-              subtasks: vec![],
-              commands,
-            }
-          );
-
-          return;
-        },
-        _ => {
-          println!("Peeeked: {:?}", peeked);
-        }
-      }
-
-      self.bump();
+    match task {
+      Some(t) => Some(t.clone()),
+      None => None,
     }
   }
-
-  pub fn parse(&mut self) {
-    while let Some(entry) = self.peek() {
-      self.bump(); 
-
-      match entry.token {
-        Token::Identifier => {
-          let following = self.peek();
-
-          if following.is_none() {
-            self.bump();
-
-            break;
-          }
-
-          let following = following.unwrap();
-
-          match following.token {
-            Token::Assign => self.parse_assign(entry),
-            Token::Colon => self.parse_task(entry),
-            _ => { self.bump(); },
-          }
-        },
-        _ => {}
-      }
-    }
-
-    println!("Assignments: {:?}", self.assignments);
-    println!("Tasks: {:?}", self.tasks);
-  }
-}
-
-pub fn parse(source: &str) {
-  // let parsed = Lexer::new(source).collect::<Vec<_>>();
-
-  // println!("{:#?}", parsed);
-
-  let mut parser = Parser::new(source);
-  parser.parse();
 }

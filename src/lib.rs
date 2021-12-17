@@ -11,17 +11,30 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
-use std::io::Read;
+use std::{
+  path::Path,
+  env,
+  process::{
+    exit,
+    Command
+  },
+  io::{
+    Write,
+    Read,
+    stdout,
+    stderr,
+  }
+};
 
 extern crate logos;
 
 #[macro_use]
 extern crate oxide;
 
-// use clap::{
-//   App,
-//   AppSettings,
-// };
+use clap::{
+  App,
+  AppSettings,
+};
 
 // use oxide::console_error;
 
@@ -29,69 +42,78 @@ pub mod result;
 pub mod config;
 pub mod commands;
 pub mod alibi;
-// mod trigger;
+pub mod runner;
 
 pub use result::Result;
 
-// use commands::{
-//   init::Init,
-// };
+use alibi::Alibi;
+use runner::Runner;
 
-// use config::Config;
-// use trigger::Trigger;
-
-
-pub async fn run() -> Result<()> {
-  println!("Motive testing....");
-
-  let source:String = file_read!("alibi");
-
-  alibi::parse(&source);
-
-  Ok(())
-}
+use commands::{
+  init::Init,
+};
 
 // pub async fn run() -> Result<()> {
-//   if Config::exists() {
-//     let config = Config::read().unwrap();
-//     config.load_envs();
-//   }
+//   println!("Motive testing....");
 
-//   let mut app = App::new("Motive")
-//     .version("0.0.1")
-//     .about("Project assistant and task runner.")
-//     .before_help("\n")
-//     .setting(AppSettings::AllowExternalSubcommands)
-//     .setting(AppSettings::ArgRequiredElseHelp)
-//     .subcommand(Init::app());
+//   let ali = Alibi::new("alibi");
+//   let runner = Runner::new(ali);
 
-//   let mut help = Vec::new();
-//   app.write_help(&mut help).unwrap();
-
-//   let matches = app.get_matches();
-//   match matches.subcommand_name() {
-//     Some("init") => Init::run(),
-//     Some(cmd) => {
-//       if Trigger::run(cmd.clone().to_string()) == false {
-//         let msg = 
-//           str::from_utf8(&help)
-//           .unwrap()
-//           .to_string()
-//           .trim()
-//           .replace("Motive 0.0.1", "")
-//           .replace("Project assistant and task runner.", "")
-//           .strip_prefix("\n\n\n")
-//           .unwrap()
-//           .to_string();
-
-//         println!();
-//         console_error!("* Command \"{}\" not found.", cmd);
-//         println!("{}\n", msg);
-//       }
-//     },
-//     None => {}
-//   }
-
+//   runner.exec("foo");
 
 //   Ok(())
 // }
+
+
+pub async fn run() -> Result<()> {
+  let mut app = App::new("Motive")
+    .version(env!("CARGO_PKG_VERSION"))
+    .about("Project assistant and task runner.")
+    .before_help("\n")
+    .setting(AppSettings::AllowExternalSubcommands)
+    .setting(AppSettings::ArgRequiredElseHelp)
+    .subcommand(Init::app());
+
+  let mut help = Vec::new();
+  app.write_help(&mut help).unwrap();
+
+  let matches = app.get_matches();
+  match matches.subcommand_name() {
+    Some("init") => Init::run(),
+    Some(cmd) => {
+      let cwd = env::current_dir().unwrap();
+      let ali_path = cwd.join("alibi");
+      let ali_file = ali_path.into_os_string().into_string().unwrap();
+    
+      let ali:Alibi = if Path::new(&ali_file).exists() {
+        Alibi::new(&ali_file)
+      } else {
+        console_error!("No alibi config found. Run 'motive init' to create one.");
+        exit(1);
+      };
+    
+      let runner = Runner::new(ali);
+    
+      if runner.exec(cmd) == false {
+        let msg = 
+          String::from_utf8(help)
+          .unwrap()
+          .to_string()
+          .trim()
+          .replace("Motive 0.0.1", "")
+          .replace("Project assistant and task runner.", "")
+          .strip_prefix("\n\n\n")
+          .unwrap()
+          .to_string();
+
+        println!();
+        console_error!("* Command \"{}\" not found.", cmd);
+        println!("{}\n", msg);
+      }
+    },
+    None => {}
+  }
+
+
+  Ok(())
+}

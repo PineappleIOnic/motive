@@ -17,6 +17,12 @@ pub enum ValueType {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct EnvVar {
+  pub key:String,
+  pub value:String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Assignment {
   pub identifier: String,
   pub value:String,
@@ -42,4 +48,11 @@ pub struct Task {
   pub name: String,
   pub subtasks: Vec<String>,
   pub commands: Vec<TaskCommand>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Tree {
+  pub assignments: Vec<Assignment>,
+  pub tasks: Vec<Task>,
+  pub env_vars: Vec<EnvVar>,
 }

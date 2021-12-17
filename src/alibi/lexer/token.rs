@@ -35,11 +35,20 @@ pub enum Token {
 
   #[token("$")]
   DollarSign,
+
+  #[token("{")]
+  OpenCurly,
+
+  #[token("}")]
+  CloseCurly,
   
+  #[token("export")]
+  Export,
+
   #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*")]
   Identifier,
 
-  #[regex(r"--?[a-zA-Z0-9_\-=]*")]
+  #[regex(r"[-|--]?[a-zA-Z0-9_\-]*")]
   Argument,
 
   #[regex(r"-?[0-9]+")]
@@ -78,6 +87,9 @@ impl fmt::Display for Token {
       Self::LiteralString => "string",
       Self::Comment => "comment",
       Self::Error => "invalid token",
+      Self::OpenCurly => "{",
+      Self::CloseCurly => "}",
+      Self::Export => "export",
     })
   }
 }
