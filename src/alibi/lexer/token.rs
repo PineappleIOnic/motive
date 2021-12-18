@@ -58,17 +58,14 @@ pub enum Token {
   #[regex(r#"'(?:\\"|\\'|[^'])*'"#)]
   LiteralString,
 
+  #[regex(r"##[ \t]?[^\n]*")]
+  Document,
+
   #[regex(r"#[^\n]*")]
   Comment,
 
   #[error]
   Error,
-}
-
-impl Token {
-  pub fn ignored(self) -> bool {
-    matches!(self, Self::Comment | Self::Newline)
-  }
 }
 
 impl fmt::Display for Token {
@@ -90,6 +87,7 @@ impl fmt::Display for Token {
       Self::OpenCurly => "{",
       Self::CloseCurly => "}",
       Self::Export => "export",
+      Self::Document => "document",
     })
   }
 }

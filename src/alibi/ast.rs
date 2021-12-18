@@ -46,6 +46,7 @@ impl TaskCommand {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Task {
   pub name: String,
+  pub description: String,
   pub subtasks: Vec<String>,
   pub commands: Vec<TaskCommand>,
 }

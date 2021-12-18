@@ -39,7 +39,6 @@ use clap::{
 // use oxide::console_error;
 
 pub mod result;
-pub mod config;
 pub mod commands;
 pub mod alibi;
 pub mod runner;
@@ -64,6 +63,20 @@ use commands::{
 //   Ok(())
 // }
 
+fn get_alibi() -> Alibi {
+  let cwd = env::current_dir().unwrap();
+  let ali_path = cwd.join("alibi");
+  let ali_file = ali_path.into_os_string().into_string().unwrap();
+
+  let ali:Alibi = if Path::new(&ali_file).exists() {
+    Alibi::new(&ali_file)
+  } else {
+    console_error!("No alibi config found. Run 'motive init' to create one.");
+    exit(1);
+  };
+
+  return ali;
+}
 
 pub async fn run() -> Result<()> {
   let mut app = App::new("Motive")
@@ -80,18 +93,37 @@ pub async fn run() -> Result<()> {
   let matches = app.get_matches();
   match matches.subcommand_name() {
     Some("init") => Init::run(),
+    Some("list") => {
+      let ali:Alibi = get_alibi();
+
+      println!();
+      console_info!("Tasks available in Alibi");
+
+      let mut char_space = 2;
+      for task in ali.tree.tasks.iter() {
+        if task.name.len() > char_space {
+          char_space = task.name.len();
+        }
+      }
+
+      ali.tree.tasks.iter().map(|task| {
+        let mut title:Vec<String> = vec![task.name.clone()];
+        let diff = char_space - task.name.len();
+        
+        for _ in 0..diff {
+          title.push(" ".to_string());
+        }
+
+        string!(format!("- {} : {}", title.join(""), task.description.trim_start()).as_str())
+      })
+      .collect::<Vec<String>>()
+      .iter()
+      .for_each(|line| {
+        console_info!("{}", line);
+      });
+    },
     Some(cmd) => {
-      let cwd = env::current_dir().unwrap();
-      let ali_path = cwd.join("alibi");
-      let ali_file = ali_path.into_os_string().into_string().unwrap();
-    
-      let ali:Alibi = if Path::new(&ali_file).exists() {
-        Alibi::new(&ali_file)
-      } else {
-        console_error!("No alibi config found. Run 'motive init' to create one.");
-        exit(1);
-      };
-    
+      let ali:Alibi = get_alibi();
       let runner = Runner::new(ali);
     
       if runner.exec(cmd) == false {
@@ -114,6 +146,7 @@ pub async fn run() -> Result<()> {
     None => {}
   }
 
+  println!();
 
   Ok(())
 }

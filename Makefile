@@ -14,7 +14,6 @@ default: watch
 RUST_CHANNEL ?= stable
 CARGO_FLAGS =
 RUSTUP_INSTALLED = $(shell command -v rustup 2> /dev/null)
-TEST_FILTER ?=
 
 ifndef RUSTUP_INSTALLED
   CARGO = cargo
@@ -41,6 +40,8 @@ build: ## Build the project in debug mode
 
 release: CARGO_FLAGS += --release
 release: build ## Build the project in release mode
+	@cd ./target/release && \
+	tar -czf motive-0.0.2-x86_64-apple-darwin.tar.gz motive
 
 
 ### Lints: https://rust-lang.github.io/rust-clippy/master/index.html
@@ -58,7 +59,7 @@ test: ## Run Tests
 	@$(CARGO) test --all-features $(TEST_FILTER)
 
 dev: ## Run development
-	@clear && $(CARGO) run --all-features -- hello
+	@clear && $(CARGO) run --all-features -- list
 
 docs: ## Build docs at target/doc
 	@$(CARGO) doc

@@ -131,7 +131,7 @@ impl<'a> Parser<'a> {
     None
   }
 
-  pub fn parse_task(&mut self, identifier:Entry) -> Option<Task> {
+  pub fn parse_task(&mut self, identifier:Entry, doc:String) -> Option<Task> {
     
     let subtasks = self.parse_task_subtasks().unwrap_or(Vec::new());
     let mut commands:Vec<TaskCommand> = Vec::new();
@@ -159,6 +159,7 @@ impl<'a> Parser<'a> {
     Some(
       Task {
         name: identifier.text,
+        description: doc,
         subtasks: subtasks.clone(),
         commands,
       }
@@ -166,6 +167,8 @@ impl<'a> Parser<'a> {
   }
 
   pub fn parse(&mut self) -> Option<Tree> {
+    let mut doc = string!("");
+
     while let Some(entry) = self.peek() {
       self.bump(); 
 
@@ -196,8 +199,6 @@ impl<'a> Parser<'a> {
             }
           }
 
-          console_info!(format!("Setting environment variable: {} to value {}", env_var, env_val));
-          
           self.env_vars.push(
             EnvVar {
               key: env_var,
@@ -222,16 +223,25 @@ impl<'a> Parser<'a> {
           match following.token {
             Token::Assign => self.parse_assign(entry),
             Token::Colon => {
-              match self.parse_task(entry) {
-                Some(task) => self.tasks.push(task),
+              match self.parse_task(entry, doc.clone()) {
+                Some(task) => {
+                  self.tasks.push(task);
+                  doc = string!("");
+                },
                 None => { continue; },
               }
             },
-            _ => { self.bump(); },
+            _ => { 
+              self.bump(); 
+            },
           }
         },
-
-        _ => { continue; }
+        Token::Document => {
+          doc = entry.text.clone().replace("##", "");
+        }
+        _ => { 
+          continue; 
+        }
       }
     }
 
