@@ -8,6 +8,7 @@
 // Copywrite (c) 2021 Wess.io
 //
 
+use std::collections::HashMap;
 use std::iter::Peekable;
 use logos::Logos;
 
@@ -26,6 +27,7 @@ use super::ast::{
   Task,
   TaskCommand,
   Tree,
+  Function,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -39,6 +41,7 @@ pub struct Parser<'a> {
   env_vars: Vec<EnvVar>,
   assignments: Vec<Assignment>,
   tasks: Vec<Task>,
+  functions: Vec<Function>,
 }
 
 impl<'a> Parser<'a> {
@@ -48,6 +51,7 @@ impl<'a> Parser<'a> {
       env_vars: Vec::new(),
       assignments: Vec::new(),
       tasks: Vec::new(),
+      functions: Vec::new(),
     }
   }
 
@@ -62,20 +66,18 @@ impl<'a> Parser<'a> {
     self.lexer.peek().map(|(text, kind)| Entry{text: string!(*text), token: *kind})
   }
 
-  pub fn parse_assign(&mut self, identifier:Entry) {
+  pub fn parse_assign(&mut self, identifier:Entry) -> Assignment {
     self.bump();
     
     let  peeked= self.peek();
 
-    self.assignments.push(
-      Assignment {
-        identifier: identifier.text,
-        value: match peeked {
-          Some(entry) => entry.text.replace("\"", "").replace("'", "").clone(),
-          None => "".to_string(),
-        },
-      }
-    );
+    Assignment {
+      identifier: identifier.text,
+      value: match peeked {
+        Some(entry) => entry.text.replace("\"", "").replace("'", "").clone(),
+        None => "".to_string(),
+      },
+    }
   }
 
   pub fn parse_task_command(&mut self) -> Option<TaskCommand> {
@@ -166,6 +168,57 @@ impl<'a> Parser<'a> {
     )
   }
 
+  pub fn parse_function(&mut self, identifier:Option<Entry>) {    
+    let mut params:Vec<String> = Vec::new();
+    let mut vars:Vec<Assignment> = Vec::new();
+    let mut body:Vec<TaskCommand> = Vec::new();
+
+    while let Some(peeked) = self.peek() {
+      self.bump();
+
+      match peeked.token {
+        Token::CloseCurly => {
+          self.bump();
+
+          break;
+        },
+        Token::LiteralString | Token::Int => {
+          params.push(peeked.text.clone());
+
+          continue;
+        },
+
+        Token::Identifier => {
+          self.bump();
+
+          if let Some(peeked) = self.peek() {
+            match peeked.token {
+              Token::Assign => {
+                let assignment = self.parse_assign(peeked);
+                vars.push(assignment);
+              },
+              _ => {
+                if let Some(cmd) = self.parse_task_command() {
+                  body.push(cmd);
+                }
+              }
+            }
+          }
+        },
+        _ => {break;}
+      }
+    }
+
+    self.functions.push(
+      Function {
+        name: identifier.unwrap().text,
+        params,
+        vars,
+        body,
+      }
+    );
+  }
+
   pub fn parse(&mut self) -> Option<Tree> {
     let mut doc = string!("");
 
@@ -188,7 +241,10 @@ impl<'a> Parser<'a> {
                 if env_var.is_empty() {
                   env_var = peeked.text;
                 } else {
-                  env_val = peeked.text;
+                  env_val = peeked.text
+                  .replace("\"", "")
+                  .replace("'", "")
+                  .clone();
                 }
 
                 self.bump();
@@ -221,7 +277,13 @@ impl<'a> Parser<'a> {
           let following = following.unwrap();
 
           match following.token {
-            Token::Assign => self.parse_assign(entry),
+            Token::OpenParen => {
+              self.parse_function(Some(entry));
+            },
+            Token::Assign => {
+              let assignment = self.parse_assign(entry);
+              self.assignments.push(assignment);
+            },
             Token::Colon => {
               match self.parse_task(entry, doc.clone()) {
                 Some(task) => {
@@ -249,6 +311,7 @@ impl<'a> Parser<'a> {
       assignments: self.assignments.clone(),
       tasks: self.tasks.clone(),
       env_vars: self.env_vars.clone(),
+      functions: self.functions.clone(),
     })
   }
 }

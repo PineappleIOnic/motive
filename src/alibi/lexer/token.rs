@@ -42,6 +42,12 @@ pub enum Token {
   #[token("}")]
   CloseCurly,
   
+  #[token("(")]
+  OpenParen,
+
+  #[token(")")]
+  CloseParen,
+
   #[token("export")]
   Export,
 
@@ -88,6 +94,8 @@ impl fmt::Display for Token {
       Self::CloseCurly => "}",
       Self::Export => "export",
       Self::Document => "document",
+      Self::OpenParen => "(",
+      Self::CloseParen => ")",
     })
   }
 }

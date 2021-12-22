@@ -8,6 +8,8 @@
 // Copywrite (c) 2021 Wess.io
 //
 
+use std::collections::HashMap;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ValueType {
   Integer,
@@ -52,15 +54,17 @@ pub struct Task {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Function {
+  pub name: String,
+  pub params: Vec<String>,
+  pub vars:Vec<Assignment>,
+  pub body:Vec<TaskCommand>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Tree {
   pub assignments: Vec<Assignment>,
   pub tasks: Vec<Task>,
   pub env_vars: Vec<EnvVar>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Function {
-  pub name: String,
-  pub args: Vec<String>,
-  pub body: String,
+  pub functions: Vec<Function>,
 }

@@ -123,25 +123,7 @@ pub async fn run() -> Result<()> {
       });
     },
     Some(cmd) => {
-      let ali:Alibi = get_alibi();
-      let runner = Runner::new(ali);
-    
-      if runner.exec(cmd) == false {
-        let msg = 
-          String::from_utf8(help)
-          .unwrap()
-          .to_string()
-          .trim()
-          .replace("Motive 0.0.1", "")
-          .replace("Project assistant and task runner.", "")
-          .strip_prefix("\n\n\n")
-          .unwrap()
-          .to_string();
-
-        println!();
-        console_error!("* Command \"{}\" not found.", cmd);
-        println!("{}\n", msg);
-      }
+      Runner::new(get_alibi()).exec(cmd);
     },
     None => {}
   }

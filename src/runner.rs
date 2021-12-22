@@ -65,7 +65,10 @@ impl Runner {
             .iter()
             .find(|a| a.identifier == var).unwrap()
             .value
-            .clone();
+            .clone()
+            .replace("\"", "")
+            .replace("'", "");
+          
           new_arg = value.clone();
         }
       }

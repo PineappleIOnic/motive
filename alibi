@@ -4,10 +4,13 @@ export BOOP="bop"
 
 tickle="tockle"
 
+world() {
+  echo "From a function"
+}
+
 ## This is a test
 hello: 
-  echo "$tickle"
-  echo "BOOP ${BOOP}"
+  world()
 
 ##This is testing
 test: hello
